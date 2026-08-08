@@ -86,14 +86,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build in FreeBSD VM
-        uses: cross-platform-actions/freebsd-action@v0.1.0
+        uses: vmactions/freebsd-vm@v1
         with:
-          os: 14.0
-          run: |
-            set -e
-            pkg install -y rust
-            cd "$GITHUB_WORKSPACE"
-            cargo build --release --locked
+          usesh: true
+          prepare: pkg install -y rust
+          run: cargo build --release --locked
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
