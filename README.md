@@ -1,0 +1,67 @@
+# mctx — Memory Context format
+
+A token-optimized, seek-indexed file format for **AI agent persistent memory**,
+plus a lightweight terminal notepad to view and edit those files.
+
+- **`src/mctx.rs`** — the format library: zero dependencies, compiles with
+  plain `rustc`. Load only the `%%INDEX`, `seek` straight to one section,
+  write/update with a `v:` version bump, rebuild the index. No JSON, no braces.
+- **`apps/mctx-notepad`** — `mctx`, a two-panel terminal editor (section list
+  + body editor, Ctrl+S to save, `c` for checkpoint). Use it like a notepad for
+  your agent's memory file.
+- **`mctx/`** — Cargo packaging wrapper so the single-file library can be used
+  as a normal crate dependency.
+
+## File format (v1.1)
+
+```
+#mctx v1.1 | updated:2026-08-08
+%%INDEX
+identity:!fixed:v1:0000000058
+projects:!durable:v2:0000000134
+%%END-INDEX
+%%@identity !fixed v:1
+user{alias,role}:
+  "devil2","student/builder"
+%%END
+```
+
+- Every byte offset is zero-padded to 10 digits so the index block's length
+  never depends on its own values (that dependency would be circular).
+- Tiers: `!fixed` (never auto-overwritten), `!durable` (superseded in place),
+  `!volatile` (short-lived, checkpoint/scratch).
+- Bodies are TOON-style tabular arrays or plain `key: value` lines — minimal
+  punctuation, easy for an LLM to read cheaply.
+
+## Build & test
+
+```
+cargo build --release          # builds target/release/mctx
+cargo test --release           # unit + library tests
+cargo clippy --release --all-targets
+rustc --edition 2021 -D warnings -O -o /tmp/mctx_test src/test_mctx.rs && /tmp/mctx_test
+```
+
+## Install
+
+- **Debian/Ubuntu**: `scripts/build-deb.sh` → `target/mctx_1.1.0_amd64.deb`,
+  then `sudo dpkg -i` or `sudo apt install ./mctx_1.1.0_amd64.deb`.
+- **Windows**: `cargo xwin build --release --target x86_64-pc-windows-msvc` →
+  `mctx.exe`.
+- **FreeBSD**: port skeleton in `pkg/freebsd/` (`make package`, `pkg add`);
+  submit it to the ports tree for `pkg install mctx`.
+- **Release binaries**: attached to each GitHub Release via
+  `.github/workflows/release.yml` (Linux x86_64, Windows x86_64, macOS x86_64
+  & arm64, FreeBSD amd64).
+
+## Usage
+
+```
+mctx [memory.mctx]      # default: ./memory.mctx (created if missing)
+```
+
+Keys: `Tab` switch panel · `a` add section · `c` checkpoint · `Enter` edit ·
+`Ctrl+S` save · `Esc` back · `q` quit (safe while unsaved).
+
+See `man/mctx.1` and `apps/mctx-notepad/src/main.rs` for details, and
+`doc/mctx-spec.md` for the format rationale.

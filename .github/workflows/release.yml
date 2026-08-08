@@ -1,0 +1,133 @@
+name: release
+
+# Builds release binaries for Linux, Windows, macOS and FreeBSD and attaches
+# them to a GitHub Release. Triggered by pushing a tag like `v1.1.0`.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Linux x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build release binary
+        run: cargo build --release --locked
+      - name: Run tests
+        run: cargo test --release --locked
+      - name: Build .deb package
+        run: scripts/build-deb.sh
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            target/release/mctx
+            target/mctx_1.1.0_amd64.deb
+
+  windows:
+    name: Windows x86_64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build release binary
+        run: cargo build --release --locked
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: target/release/mctx.exe
+
+  macos-x86:
+    name: macOS x86_64
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+      - name: Build release binary
+        run: cargo build --release --locked --target x86_64-apple-darwin
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-x86
+          path: target/x86_64-apple-darwin/release/mctx
+
+  macos-arm:
+    name: macOS arm64
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build release binary
+        run: cargo build --release --locked
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm
+          path: target/release/mctx
+
+  freebsd:
+    name: FreeBSD amd64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build in FreeBSD VM
+        uses: crossplatform-actions/freebsd-action@v0.1.0
+        with:
+          os: 14.0
+          run: |
+            set -e
+            pkg install -y rust
+            cd "$GITHUB_WORKSPACE"
+            cargo build --release --locked
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd
+          path: target/release/mctx
+
+  release:
+    name: Publish GitHub Release
+    needs: [linux, windows, macos-x86, macos-arm, freebsd]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: linux, path: artifacts/linux }
+      - uses: actions/download-artifact@v4
+        with: { name: windows, path: artifacts/windows }
+      - uses: actions/download-artifact@v4
+        with: { name: macos-x86, path: artifacts/macos-x86 }
+      - uses: actions/download-artifact@v4
+        with: { name: macos-arm, path: artifacts/macos-arm }
+      - uses: actions/download-artifact@v4
+        with: { name: freebsd, path: artifacts/freebsd }
+      - name: Stage release assets
+        run: |
+          mkdir -p assets
+          cp artifacts/linux/mctx assets/mctx-linux-x86_64
+          cp artifacts/linux/mctx_1.1.0_amd64.deb assets/mctx_1.1.0_amd64.deb
+          cp artifacts/windows/mctx.exe assets/mctx-windows-x86_64.exe
+          cp artifacts/macos-x86/mctx assets/mctx-macos-x86_64
+          cp artifacts/macos-arm/mctx assets/mctx-macos-arm64
+          cp artifacts/freebsd/mctx assets/mctx-freebsd-amd64
+          ls -la assets
+      - name: Attach assets to release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: mctx ${{ github.ref_name }}
+          generate_release_notes: true
+          files: assets/*

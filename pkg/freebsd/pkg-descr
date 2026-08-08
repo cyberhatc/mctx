@@ -1,0 +1,12 @@
+mctx is a lightweight terminal notepad for the .mctx memory context format
+used by AI agents as persistent memory.
+
+It presents a two-panel editor: the section list from the file's %%INDEX
+block on the left (name, durability tier, version), and a body editor on the
+right. Saving a section bumps its v: counter and rebuilds the byte-offset
+index so readers can seek straight to a section without scanning the file.
+
+Also ships the zero-dependency mctx Rust library (src/mctx.rs) for reading
+and writing .mctx files programmatically.
+
+WWW: https://github.com/cyberhatc/mctx

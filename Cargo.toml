@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = ["mctx", "apps/mctx-notepad"]
+
+[profile.release]
+lto = true
+strip = true

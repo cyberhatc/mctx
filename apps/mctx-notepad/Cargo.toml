@@ -1,0 +1,15 @@
+[package]
+name = "mctx-notepad"
+version = "1.1.0"
+edition = "2021"
+description = "A lightweight terminal notepad for .mctx memory context files (AI agent memory)"
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "mctx"
+path = "src/main.rs"
+
+[dependencies]
+mctx = { path = "../../mctx" }
+ratatui = "0.29"
+crossterm = "0.28"

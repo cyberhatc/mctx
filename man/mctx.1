@@ -1,0 +1,58 @@
+.TH MCTX 1 "2026-08-08" "mctx 1.1.0" "User Commands"
+.SH NAME
+mctx \- lightweight terminal notepad for .mctx memory context files
+.SH SYNOPSIS
+.B mctx
+[\fIfile.mctx\fR]
+.SH DESCRIPTION
+.B mctx
+is a two-panel terminal editor for the \fI.mctx\fR memory context format used
+by AI agents as persistent memory. The left panel lists the sections declared
+in the file's \fB%%INDEX\fR block (name, durability tier, version). The right
+panel edits the selected section's body. Saving a section bumps its \fIv:\fR
+version and rebuilds the byte-offset index.
+.PP
+If \fIfile.mctx\fR does not exist it is created with a fresh header. If no
+file is given, \fImemory.mctx\fR in the current directory is used.
+.SH TIERS
+Every section carries one durability tier:
+.TP
+.B !fixed
+identity-level facts, never auto-overwritten
+.TP
+.B !durable
+current-state facts, updated in place when superseded
+.TP
+.B !volatile
+short-lived state (checkpoints, scratch), safe to drop
+.SH KEYS
+.TP
+.B Tab
+switch between the section list and the editor
+.TP
+.B a
+add a new section (prompts for name, then tier)
+.TP
+.B c
+open the \fIcheckpoint\fR section, creating it if missing
+.TP
+.B Enter
+edit the selected section / insert newline in the editor
+.TP
+.B Ctrl+S
+save the current section body (bumps its version)
+.TP
+.B Esc
+back to the section list
+.TP
+.B q
+quit (ignored while the buffer is unsaved); \fBQ\fR quits regardless
+.SH FILES
+.TP
+.I memory.mctx
+default memory file
+.SH EXIT STATUS
+Returns 0 on normal exit.
+.SH SEE ALSO
+The \fI.mctx\fR format spec and agent operating guide are distributed with the
+project source.
