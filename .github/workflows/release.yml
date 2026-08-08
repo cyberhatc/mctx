@@ -86,7 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build in FreeBSD VM
-        uses: crossplatform-actions/freebsd-action@v0.1.0
+        uses: cross-platform-actions/freebsd-action@v0.1.0
         with:
           os: 14.0
           run: |
