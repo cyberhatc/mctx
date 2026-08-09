@@ -303,3 +303,139 @@ fn not_found(name: &str) -> io::Error {
         format!("section not in index: {name}"),
     )
 }
+
+// ---- in-memory parsing & rendering --------------------------------------------
+
+/// A `.mctx` document parsed straight from a string, with no disk I/O. Lets
+/// editors and preview panes inspect the current buffer live, before it is
+/// written, so humans and AI can both see exactly what will be saved.
+#[derive(Debug, Clone)]
+pub struct Parsed {
+    /// Everything before the first section marker (`%%@`): the `#mctx v1.1 |
+    /// updated:<ISO>` header line and any blank lines.
+    pub header: String,
+    /// Index rows in file order, with byte offsets into the string.
+    pub sections: Vec<Section>,
+    /// Section bodies in file order: `(name, body text without %%END)`.
+    pub bodies: Vec<(String, String)>,
+}
+
+/// Parse a `.mctx` document held in memory. Section bodies are the raw text
+/// between `%%@name tier v:N` and `%%END`, line-joined with `\n`.
+pub fn parse_content(content: &str) -> Parsed {
+    let mut header = String::new();
+    let mut sections = Vec::new();
+    let mut bodies = Vec::new();
+
+    let mut bytes_seen = 0usize;
+    let mut current: Option<(String, String, u32, usize, Vec<String>)> = None;
+
+    for line in content.split_inclusive('\n') {
+        let line_start = bytes_seen;
+        bytes_seen += line.len();
+        let trimmed = line.trim_end_matches(['\n', '\r']);
+
+        if current.is_none() {
+            if let Some((name, tier, version)) = parse_marker(trimmed) {
+                current = Some((name, tier, version, line_start, Vec::new()));
+            } else {
+                header.push_str(trimmed);
+                header.push('\n');
+            }
+            continue;
+        }
+
+        if trimmed.starts_with("%%END") {
+            if let Some((name, tier, version, off, lines)) = current.take() {
+                sections.push(Section {
+                    name: name.clone(),
+                    tier,
+                    version,
+                    offset: off as u64,
+                });
+                bodies.push((name, lines.join("")));
+            }
+        } else {
+            current.as_mut().expect("current section").4.push(trimmed.to_string());
+            current.as_mut().expect("current section").4.push('\n'.to_string());
+        }
+    }
+
+    // Unterminated trailing section — still capture it rather than dropping it.
+    if let Some((name, tier, version, off, lines)) = current {
+        sections.push(Section {
+            name: name.clone(),
+            tier,
+            version,
+            offset: off as u64,
+        });
+        bodies.push((name, lines.join("")));
+    }
+
+    Parsed {
+        header,
+        sections,
+        bodies,
+    }
+}
+
+/// Render a human-readable Markdown document from a `.mctx` buffer. Section
+/// names become `##` headings with their tier/version badge; bodies are kept
+/// verbatim so a human reads exactly the text an AI agent parses. Writing this
+/// out as a `.md` is a lossless human view of the memory file.
+pub fn render_markdown(content: &str) -> String {
+    let parsed = parse_content(content);
+    let mut out = String::new();
+
+    let title = parsed.header.trim();
+    if !title.is_empty() {
+        out.push_str("# ");
+        out.push_str(title);
+        out.push('\n');
+    }
+
+    for (i, section) in parsed.sections.iter().enumerate() {
+        out.push_str(&format!(
+            "\n## {} `{}` — v{}\n",
+            section.name, section.tier, section.version
+        ));
+        if let Some((_, body)) = parsed.bodies.get(i) {
+            out.push_str(body);
+            if !body.ends_with('\n') {
+                out.push('\n');
+            }
+        }
+    }
+    out
+}
+
+/// Compose the `#mctx v1.1 | updated:<ISO date>` header for today.
+pub fn make_header() -> String {
+    let (y, m, d) = today_ymd();
+    format!("#mctx v1.1 | updated:{y:04}-{m:02}-{d:02}")
+}
+
+/// Convert unix-seconds-since-epoch into a civil (year, month, day) using
+/// Howard Hinnant's `civil_from_days` algorithm — no chrono dependency.
+fn today_ymd() -> (i64, u32, u32) {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    let (y, m, d) = civil_from_days(secs.div_euclid(86400));
+    (y, m as u32, d as u32)
+}
+
+/// Days since 1970-01-01 → (year, month 1-12, day 1-31).
+fn civil_from_days(z: i64) -> (i64, i64, i64) {
+    let z = z + 719468;
+    let era = z.div_euclid(146097);
+    let doe = z.rem_euclid(146097);
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    (if m <= 2 { y + 1 } else { y }, m, d)
+}

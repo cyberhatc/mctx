@@ -150,6 +150,39 @@ fn main() {
     assert_byte_exact(&path2, &store2);
     let _ = fs::remove_file(&path2);
 
+    // 10. In-memory parse matches the disk parse byte-for-byte.
+    let on_disk = fs::read_to_string(&path).unwrap();
+    let parsed = mctx::parse_content(&on_disk);
+    assert_eq!(parsed.sections.len(), store.index().len());
+    for (i, section) in store.index().iter().enumerate() {
+        assert_eq!(parsed.sections[i].name, section.name, "parse order");
+        assert_eq!(parsed.sections[i].tier, section.tier, "parse tier");
+        assert_eq!(parsed.sections[i].version, section.version, "parse version");
+        assert_eq!(
+            parsed.bodies[i].1,
+            store.read(&section.name).unwrap(),
+            "parse body '{name}'",
+            name = section.name
+        );
+    }
+    assert!(parsed.header.starts_with("#mctx v1.1 | updated:"), "header");
+
+    // 11. Markdown render: headings + verbatim bodies, lossless for humans.
+    let md = mctx::render_markdown(&on_disk);
+    for section in store.index() {
+        assert!(
+            md.contains(&format!("## {} `{}` — v{}", section.name, section.tier, section.version)),
+            "markdown heading for '{}'",
+            section.name
+        );
+    }
+    assert!(md.contains("SmartTodo"), "markdown keeps body text");
+    assert!(md.contains("devil2"), "markdown keeps body text");
+
+    // 12. make_header produces today's ISO date.
+    let header = mctx::make_header();
+    assert!(header.starts_with("#mctx v1.1 | updated:"), "{header}");
+
     println!("index:");
     for section in store.index() {
         println!(

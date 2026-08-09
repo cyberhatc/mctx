@@ -1,0 +1,16 @@
+[package]
+name = "mctx-gui"
+version = "1.1.0"
+edition = "2021"
+description = "Desktop notepad for .mctx memory files with human and AI views"
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "mctx-gui"
+path = "src/main.rs"
+
+[dependencies]
+mctx = { path = "../../mctx" }
+eframe = "0.36"
+rfd = "0.17"
+serde_json = "1"

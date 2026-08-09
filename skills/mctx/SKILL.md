@@ -92,14 +92,23 @@ first on the next session and resume from `next:`.
 
 ## 6. Tools
 
-- **Notepad app** (`mctx [file.mctx]`): two-panel terminal editor. `a` add
+- **Terminal notepad** (`mctx [file.mctx]`): two-panel editor. `a` add
   section, `c` checkpoint, `Enter` edit, `Ctrl+S` save (bumps `v:`), `q` quit.
+- **Desktop notepad** (`mctx-gui [file.mctx]`): two views of the same buffer —
+  a **Human** tab rendering the memory as readable Markdown, and an **AI** tab
+  with the raw `.mctx` source plus a structured JSON breakdown (sections,
+  tiers, versions, byte offsets, bodies). Ctrl+S save, Ctrl+O open,
+  Ctrl+Shift+S save as. On Debian/Ubuntu the `.deb` registers the
+  `application/x-mctx` MIME type so `.mctx` files open in the app from the
+  file manager.
 - **Library** (`src/mctx.rs`, or the `mctx` crate): `Store::open(path)`,
   `reload()` (index only), `read(name)` (seek-read), `write(name, tier, body)`
-  (update-or-append + reindex), `checkpoint(body)`, `rebuild_index()`.
+  (update-or-append + reindex), `checkpoint(body)`, `rebuild_index()`,
+  `parse_content(str)` (in-memory parse for live previews),
+  `render_markdown(str)` (lossless human view), `make_header()`.
 - Install: `scripts/install.sh` one-liner, `.deb` for Debian/Ubuntu,
   Homebrew `cyberhatc/mctx/mctx`, FreeBSD port in `pkg/freebsd/`, Windows
-  `mctx-windows-x86_64.exe`, Android APK + Termux.
+  `mctx-*.exe`, Android APK + Termux.
 
 ## 7. Anti-patterns
 

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["mctx", "apps/mctx-notepad"]
+members = ["mctx", "apps/mctx-notepad", "apps/mctx-gui"]
 
 [profile.release]
 lto = true

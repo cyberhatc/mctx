@@ -1,7 +1,7 @@
 # mctx — Memory Context format
 
 A token-optimized, seek-indexed file format for **AI agent persistent memory**,
-plus a lightweight terminal notepad to view and edit those files.
+plus notepad apps — terminal and desktop GUI — to view and edit those files.
 
 - **`src/mctx.rs`** — the format library: zero dependencies, compiles with
   plain `rustc`. Load only the `%%INDEX`, `seek` straight to one section,
@@ -9,6 +9,10 @@ plus a lightweight terminal notepad to view and edit those files.
 - **`apps/mctx-notepad`** — `mctx`, a two-panel terminal editor (section list
   + body editor, Ctrl+S to save, `c` for checkpoint). Use it like a notepad for
   your agent's memory file.
+- **`apps/mctx-gui`** — `mctx-gui`, a desktop notepad with **two views**:
+  a **Human** tab that renders the memory as readable Markdown, and an **AI**
+  tab showing the raw `.mctx` source plus a structured JSON breakdown. Open a
+  `.mctx` file and both you and your agents see the same text.
 - **`mctx/`** — Cargo packaging wrapper so the single-file library can be used
   as a normal crate dependency.
 
@@ -51,9 +55,12 @@ macOS and FreeBSD (plus a `.deb` and an Android APK) are attached to each
 - **One-liner (any OS)**: `curl -sSL https://raw.githubusercontent.com/cyberhatc/mctx/main/scripts/install.sh | bash`
 - **Debian / Ubuntu**: `scripts/build-deb.sh` → `target/mctx_1.1.0_amd64.deb`,
   then `sudo apt install ./mctx_1.1.0_amd64.deb`
-  (the package uses gzip-compressed archives, so any apt/dpkg version accepts it)
+  (the package uses gzip-compressed archives, so any apt/dpkg version accepts
+  it; it installs both `mctx` and `mctx-gui` and registers `.mctx` files so
+  they open in the mctx app from your file manager)
 - **Homebrew (macOS/Linux)**: `brew install cyberhatc/mctx/mctx`
-- **Windows**: `mctx-windows-x86_64.exe` from the release
+- **Windows**: `mctx-windows-x86_64.exe` and `mctx-gui-windows-x86_64.exe`
+  from the release
 - **FreeBSD**: port skeleton in `pkg/freebsd/` (`make package`, `pkg add`);
   submit it to the ports tree for `pkg install mctx`
 - **Android**: download `mctx-android.apk` from the release and side-load it,
@@ -64,12 +71,26 @@ macOS and FreeBSD (plus a `.deb` and an Android APK) are attached to each
 
 ## Usage
 
+Terminal notepad:
+
 ```
 mctx [memory.mctx]      # default: ./memory.mctx (created if missing)
 ```
 
 Keys: `Tab` switch panel · `a` add section · `c` checkpoint · `Enter` edit ·
 `Ctrl+S` save · `Esc` back · `q` quit (safe while unsaved).
+
+Desktop notepad (human + AI views):
+
+```
+mctx-gui [memory.mctx]   # open a file, or use Open…/Save As…
+```
+
+`mctx-gui` opens `.mctx` files with a **Human** tab (readable Markdown) and
+an **AI** tab (raw `.mctx` source + JSON structure). Ctrl+S saves, Ctrl+O
+opens, Ctrl+Shift+S saves as. On Debian/Ubuntu the `.deb` wires up the
+`application/x-mctx` MIME type, so double-clicking a `.mctx` file opens it in
+the app like a notepad.
 
 See `man/mctx.1` and `apps/mctx-notepad/src/main.rs` for details, and
 `doc/mctx-spec.md` for the format rationale.
