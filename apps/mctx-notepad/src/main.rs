@@ -686,7 +686,7 @@ fn draw_prompt(f: &mut Frame, area: Rect, prompt: &Prompt) {
 // ---- entry point ----------------------------------------------------------------
 
 const USAGE: &str = "\
-mctx 2.1.4 — terminal notepad for .mctx memory context files
+mctx 2.1.5 — terminal notepad for .mctx memory context files
 
 USAGE:
     mctx [FILE.mctx]                 interactive notepad (default: ./memory.mctx)
@@ -730,7 +730,7 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
     if args.iter().any(|a| a == "--version" || a == "-V" || a == "version") {
-        println!("mctx 2.1.4");
+        println!("mctx 2.1.5");
         return Ok(());
     }
 

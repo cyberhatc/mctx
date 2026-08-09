@@ -1,20 +1,54 @@
-# mctx — Memory Context format
+<div align="center">
 
-A token-optimized, seek-indexed file format for **AI agent persistent memory**,
-plus notepad apps — terminal and desktop GUI — to view and edit those files.
+# mctx — Memory Context
 
-- **`src/mctx.rs`** — the format library: zero dependencies, compiles with
-  plain `rustc`. Load only the `%%INDEX`, `seek` straight to one section,
-  write/update with a `v:` version bump, rebuild the index. No JSON, no braces.
-- **`apps/mctx-notepad`** — `mctx`, a two-panel terminal editor (section list
-  + body editor, Ctrl+S to save, `c` for checkpoint). Use it like a notepad for
-  your agent's memory file.
-- **`apps/mctx-gui`** — `mctx-gui`, a desktop notepad with **two views**:
-  a **Human** tab that renders the memory as readable Markdown, and an **AI**
-  tab showing the raw `.mctx` source plus a structured JSON breakdown. Open a
-  `.mctx` file and both you and your agents see the same text.
-- **`mctx/`** — Cargo packaging wrapper so the single-file library can be used
-  as a normal crate dependency.
+**A token-optimized, seek-indexed memory format for AI agents — with a
+beautiful desktop app, a terminal notepad, and an Android app to read & edit
+it.**
+
+`v2.1.5` · MIT License · [GitHub Releases](https://github.com/cyberhatc/mctx/releases) · [Install](#install)
+
+</div>
+
+---
+
+## Why mctx?
+
+When an AI agent needs to remember things across sessions, it shouldn't burn
+tokens on verbose JSON or fragile free-text. `.mctx` files are:
+
+- **Token-optimized** — a seek-indexed flat format with minimal punctuation.
+  One section = one `%%@name tier v:N` block. No braces, no quoting noise.
+- **Fast** — the `%%INDEX` block tells a reader exactly where each section
+  lives, so an agent can `seek` straight to what it needs instead of parsing
+  a whole file.
+- **Human + AI readable** — the same file opens in a **desktop GUI** with a
+  friendly Markdown view *and* a raw/JSON AI view, so you and your agents see
+  the same text.
+- **Zero dependencies** — the core library compiles with plain `rustc`. No
+  `serde`, no `serde_json`, no build script.
+
+## Screenshots
+
+The desktop notepad (`mctx-gui`) shows **two views** of the same file.
+
+| Human tab — rendered Markdown, easy on the eyes | AI tab — raw `.mctx` source + JSON breakdown |
+|:---:|:---:|
+| ![mctx-gui human view](images/gui-human-tab.png) | ![mctx-gui AI view](images/gui-ai-tab.png) |
+
+---
+
+## Components
+
+| Component | What it is |
+|---|---|
+| **`src/mctx.rs`** | The format library: zero dependencies, `rustc`-only. Load the `%%INDEX`, seek to one section, write with a `v:` version bump, rebuild the index. |
+| **`apps/mctx-gui`** → `mctx-gui` | Desktop notepad (egui). **Human** tab (Markdown) + **AI** tab (raw + JSON). Auto-reloads when the file changes on disk. Native open/save dialogs. |
+| **`apps/mctx-notepad`** → `mctx` | Two-panel terminal editor (section list + body), plus a full **agent/script CLI** (`show`, `md`, `json`, `list`, `get`, `set`, `checkpoint`, `index`, `new`). |
+| **`android/`** → `mctx-android.apk` | Storage Access Framework notepad for Android. |
+| **`mctx/`** | Cargo wrapper so the single-file library is a normal crate dependency. |
+
+---
 
 ## File format (v1.1)
 
@@ -30,48 +64,55 @@ user{alias,role}:
 %%END
 ```
 
-- Every byte offset is zero-padded to 10 digits so the index block's length
-  never depends on its own values (that dependency would be circular).
-- Tiers: `!fixed` (never auto-overwritten), `!durable` (superseded in place),
-  `!volatile` (short-lived, checkpoint/scratch).
-- Bodies are TOON-style tabular arrays or plain `key: value` lines — minimal
-  punctuation, easy for an LLM to read cheaply.
+- Every byte offset is zero-padded to 10 digits, so the index block's length
+  never depends on its own values.
+- **Tiers**: `!fixed` (identity, never auto-overwritten), `!durable` (current
+  state, superseded in place), `!volatile` (checkpoint/scratch, safe to drop).
+- **Bodies** are TOON-style tabular arrays or plain `key: value` lines —
+  minimal punctuation, cheap for an LLM to read.
 
-## Build & test
+See `doc/mctx-spec.md` for the full rationale.
 
-```
-cargo build --release          # builds target/release/mctx
-cargo test --release           # unit + library tests
-cargo clippy --release --all-targets
-rustc --edition 2021 -D warnings -O -o /tmp/mctx_test src/test_mctx.rs && /tmp/mctx_test
-```
+---
 
 ## Install
 
-Every install path is documented below; prebuilt binaries for Linux, Windows,
-macOS and FreeBSD (plus a `.deb` and an Android APK) are attached to each
-[GitHub Release](https://github.com/cyberhatc/mctx/releases).
+Prebuilt binaries for **Linux, Windows, macOS and FreeBSD** (plus a `.deb` and
+an Android APK) are attached to each [GitHub Release](https://github.com/cyberhatc/mctx/releases).
 
-- **One-liner (any OS)**: `curl -sSL https://raw.githubusercontent.com/cyberhatc/mctx/main/scripts/install.sh | bash`
-- **Debian / Ubuntu**: `scripts/build-deb.sh` → `target/mctx_2.1.4_amd64.deb`,
-  then `sudo apt install ./mctx_2.1.4_amd64.deb`
-  (the package uses gzip-compressed archives, so any apt/dpkg version accepts
-  it; it installs both `mctx` and `mctx-gui` and registers `.mctx` files so
-  they open in the mctx app from your file manager)
+- **One-liner (any OS)**:
+  `curl -sSL https://raw.githubusercontent.com/cyberhatc/mctx/main/scripts/install.sh | bash`
+- **Debian / Ubuntu**: `scripts/build-deb.sh` → `target/mctx_2.1.5_amd64.deb`,
+  then `sudo apt install ./mctx_2.1.5_amd64.deb` (installs `mctx` *and*
+  `mctx-gui`, registers the `application/x-mctx` MIME type so `.mctx` files
+  open in the app from your file manager).
 - **Homebrew (macOS/Linux)**: `brew install cyberhatc/mctx/mctx`
 - **Windows**: `mctx-windows-x86_64.exe` and `mctx-gui-windows-x86_64.exe`
-  from the release
-- **FreeBSD**: port skeleton in `pkg/freebsd/` (`make package`, `pkg add`);
-  submit it to the ports tree for `pkg install mctx`
-- **Android**: download `mctx-android.apk` from the release and side-load it,
-  or use Termux: `pkg install rust && cargo install --path apps/mctx-notepad`
+  from the release.
+- **FreeBSD**: port skeleton in `pkg/freebsd/`.
+- **Android**: side-load `mctx-android.apk` from the release, or use Termux:
+  `pkg install rust && cargo install --path apps/mctx-notepad`.
 - **As an agent skill**: `bash scripts/install-skill.sh` installs
-  `skills/mctx` into `~/.config/opencode/skills/` and `~/.claude/skills/`
-  so agents know the `.mctx` read/write/checkpoint protocol globally.
+  `skills/mctx` into `~/.config/opencode/skills/` and `~/.claude/skills/`.
+
+---
 
 ## Usage
 
-Terminal notepad:
+### Desktop app
+
+```
+mctx-gui [memory.mctx]   # open a file, or use Open… / Save As…
+```
+
+- **Human** tab: the memory rendered as readable Markdown.
+- **AI** tab: the raw `.mctx` source plus a structured JSON breakdown.
+- `Ctrl+S` save · `Ctrl+O` open · `Ctrl+Shift+S` save as · `Ctrl+R` reload.
+- The app **watches the file and reloads automatically** when it changes on
+  disk (e.g. an agent writes new memory while you're looking at it), so the
+  view stays live.
+
+### Terminal notepad
 
 ```
 mctx [memory.mctx]      # default: ./memory.mctx (created if missing)
@@ -80,8 +121,7 @@ mctx [memory.mctx]      # default: ./memory.mctx (created if missing)
 Keys: `Tab` switch panel · `a` add section · `c` checkpoint · `Enter` edit ·
 `Ctrl+S` save · `Esc` back · `q` quit (safe while unsaved).
 
-Agent / script mode (non-interactive — what an AI uses to manage its own
-memory file):
+### Agent / script mode (what an AI uses)
 
 ```
 mctx show FILE                  raw .mctx
@@ -95,21 +135,31 @@ mctx index FILE                 rebuild the %%INDEX after hand edits
 mctx new FILE                   create a fresh file
 ```
 
-Example: `printf 'next: fix the bug\n' | mctx checkpoint memory.mctx -`
+Example:
 
-Desktop notepad (human + AI views):
-
-```
-mctx-gui [memory.mctx]   # open a file, or use Open…/Save As…
+```bash
+printf 'next: fix the bug\n' | mctx checkpoint memory.mctx -
 ```
 
-`mctx-gui` opens `.mctx` files with a **Human** tab (readable Markdown) and
-an **AI** tab (raw `.mctx` source + JSON structure). Ctrl+S saves, Ctrl+O
-opens, Ctrl+Shift+S saves as, Ctrl+R reloads. The app watches the file on
-disk and **reloads it automatically** when something else changes it (e.g.
-the mctx CLI writing new memory while the app is open), so the view stays
-live. On Debian/Ubuntu the `.deb` wires up the `application/x-mctx` MIME
-type, so double-clicking a `.mctx` file opens it in the app like a notepad.
+---
 
-See `man/mctx.1` and `apps/mctx-notepad/src/main.rs` for details, and
-`doc/mctx-spec.md` for the format rationale.
+## Build & test
+
+```
+cargo build --release          # builds target/release/mctx
+cargo test --release           # unit + library tests
+cargo clippy --release --all-targets
+rustc --edition 2021 -D warnings -O -o /tmp/mctx_test src/test_mctx.rs && /tmp/mctx_test
+```
+
+See `man/mctx.1` and `apps/mctx-notepad/src/main.rs` for details.
+
+---
+
+<div align="center">
+
+Built for humans and AI agents to share the same memory.
+
+[Report a bug](https://github.com/cyberhatc/mctx/issues) · MIT License
+
+</div>

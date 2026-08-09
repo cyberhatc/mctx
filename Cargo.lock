@@ -1870,11 +1870,11 @@ dependencies = [
 
 [[package]]
 name = "mctx"
-version = "2.1.4"
+version = "2.1.5"
 
 [[package]]
 name = "mctx-gui"
-version = "2.1.4"
+version = "2.1.5"
 dependencies = [
  "eframe",
  "mctx",
@@ -1883,7 +1883,7 @@ dependencies = [
 
 [[package]]
 name = "mctx-notepad"
-version = "2.1.4"
+version = "2.1.5"
 dependencies = [
  "crossterm",
  "mctx",

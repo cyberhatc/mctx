@@ -1,6 +1,6 @@
 [package]
 name = "mctx-gui"
-version = "2.1.4"
+version = "2.1.5"
 edition = "2021"
 description = "Desktop notepad for .mctx memory files with human and AI views"
 license = "MIT OR Apache-2.0"
