@@ -689,7 +689,17 @@ const USAGE: &str = "\
 mctx 1.1.0 — terminal notepad for .mctx memory context files
 
 USAGE:
-    mctx [FILE.mctx]
+    mctx [FILE.mctx]                 interactive notepad (default: ./memory.mctx)
+    mctx show FILE                   print the raw .mctx file
+    mctx md FILE                     human-readable Markdown view
+    mctx json FILE                   AI view: structured JSON (sections/tiers/v/offsets)
+    mctx list FILE                   index rows: name <tab> tier <tab> v<N> <tab> offset
+    mctx get FILE SECTION            print one section's body
+    mctx set FILE SECTION TIER BODY  write a section (bumps its v:); BODY may be '-'
+                                     for stdin. Creates the file if missing.
+    mctx checkpoint FILE BODY        write the !volatile checkpoint; '-' = stdin
+    mctx index FILE                  rebuild the %%INDEX after hand edits
+    mctx new FILE                    create a fresh file with a header
 
 If FILE does not exist it is created with a fresh header; the default is
 ./memory.mctx.
@@ -706,6 +716,15 @@ KEYS:
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
+
+    if args.len() >= 2 {
+        match args[1].as_str() {
+            "show" | "md" | "json" | "list" | "get" | "set" | "checkpoint" | "index" | "new" => {
+                return run_cli(&args);
+            }
+            _ => {}
+        }
+    }
     if args.iter().any(|a| a == "--help" || a == "-h" || a == "help") {
         print!("{USAGE}");
         return Ok(());
@@ -724,6 +743,107 @@ fn main() -> io::Result<()> {
     run(app)
 }
 
+/// Non-interactive subcommands so agents and scripts can read and update a
+/// `.mctx` memory file. Every write goes through the library, so the index and
+/// version counters stay consistent.
+fn run_cli(args: &[String]) -> io::Result<()> {
+    let cmd = args[1].as_str();
+    let file = args.get(2).map(String::as_str).unwrap_or("memory.mctx");
+
+    match cmd {
+        "show" => {
+            print!("{}", fs::read_to_string(file)?);
+        }
+        "md" => {
+            let content = fs::read_to_string(file)?;
+            print!("{}", mctx::render_markdown(&content));
+        }
+        "json" => {
+            let content = fs::read_to_string(file)?;
+            print!("{}", mctx::render_json(&content));
+        }
+        "list" => {
+            let store = Store::open(file)?;
+            for section in store.index() {
+                println!(
+                    "{}\t{}\tv{}\t{}",
+                    section.name, section.tier, section.version, section.offset
+                );
+            }
+        }
+        "get" => {
+            let name = args
+                .get(3)
+                .ok_or_else(|| cli_err("usage: mctx get FILE SECTION"))?;
+            let store = Store::open(file)?;
+            print!("{}", store.read(name)?);
+        }
+        "set" => {
+            let name = args
+                .get(3)
+                .ok_or_else(|| cli_err("usage: mctx set FILE SECTION TIER [BODY|-]"))?;
+            let tier = args
+                .get(4)
+                .ok_or_else(|| cli_err("usage: mctx set FILE SECTION TIER [BODY|-]"))?;
+            let body = body_from(args, 5)?;
+            ensure_exists(file)?;
+            let mut store = Store::open(file)?;
+            store.write(name, tier, &body)?;
+            println!("wrote '{name}' {tier} -> {file}");
+        }
+        "checkpoint" => {
+            let body = body_from(args, 3)?;
+            ensure_exists(file)?;
+            let mut store = Store::open(file)?;
+            store.checkpoint(&body)?;
+            println!("checkpoint saved -> {file}");
+        }
+        "index" => {
+            let store = Store::open(file)?;
+            store.rebuild_index()?;
+            println!("index rebuilt -> {file}");
+        }
+        "new" => {
+            fs::write(file, format!("{}\n", mctx::make_header()))?;
+            println!("created -> {file}");
+        }
+        _ => unreachable!("cli subcommand matched upstream"),
+    }
+    Ok(())
+}
+
+/// Collect a section body from trailing arguments, or from stdin when `-` or
+/// when nothing is given and stdin is not a terminal (piped).
+fn body_from(args: &[String], start: usize) -> io::Result<String> {
+    use std::io::IsTerminal;
+    match args.get(start) {
+        Some(arg) if arg == "-" => {
+            let mut buf = String::new();
+            io::Read::read_to_string(&mut io::stdin(), &mut buf)?;
+            Ok(buf)
+        }
+        Some(_) => Ok(args[start..].join(" ")),
+        None if io::stdin().is_terminal() => Ok(String::new()),
+        None => {
+            let mut buf = String::new();
+            io::Read::read_to_string(&mut io::stdin(), &mut buf)?;
+            Ok(buf)
+        }
+    }
+}
+
+/// Create the file with a fresh header if it does not exist yet.
+fn ensure_exists(path: &str) -> io::Result<()> {
+    if !Path::new(path).exists() {
+        fs::write(path, format!("{}\n", mctx::make_header()))?;
+    }
+    Ok(())
+}
+
+fn cli_err(msg: &str) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidInput, msg)
+}
+
 // ---- tests ------------------------------------------------------------------------
 
 #[cfg(test)]
@@ -738,6 +858,32 @@ mod tests {
         assert!((1..=31).contains(&d));
         let header = make_header();
         assert!(header.starts_with("#mctx v1.1 | updated:"), "{header}");
+    }
+
+    #[test]
+    fn cli_set_get_list_roundtrip() {
+        let dir = std::env::temp_dir();
+        let path = dir.join(format!("mctx_cli_test_{}.mctx", std::process::id()));
+        let _ = fs::remove_file(&path);
+        let p = path.to_string_lossy().to_string();
+
+        let set = vec!["mctx".to_string(), "set".into(), p.clone(), "identity".into(), "!fixed".into(), "user{alias}: \"devil2\"".into()];
+        run_cli(&set).unwrap();
+        assert!(Path::new(&p).exists(), "set creates the file");
+
+        let get = vec!["mctx".into(), "get".into(), p.clone(), "identity".into()];
+        run_cli(&get).unwrap();
+        let body = Store::open(&p).unwrap().read("identity").unwrap();
+        assert_eq!(body, "user{alias}: \"devil2\"\n");
+        assert!(body.contains("devil2"));
+
+        let list = vec!["mctx".into(), "list".into(), p.clone()];
+        run_cli(&list).unwrap();
+
+        let json = vec!["mctx".into(), "json".into(), p.clone()];
+        run_cli(&json).unwrap();
+
+        let _ = fs::remove_file(&p);
     }
 
     #[test]

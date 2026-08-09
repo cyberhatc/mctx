@@ -166,6 +166,10 @@ fn main() {
         );
     }
     assert!(parsed.header.starts_with("#mctx v1.1 | updated:"), "header");
+    assert!(
+        !parsed.header.contains("%%INDEX"),
+        "header must not swallow the index block"
+    );
 
     // 11. Markdown render: headings + verbatim bodies, lossless for humans.
     let md = mctx::render_markdown(&on_disk);
@@ -182,6 +186,20 @@ fn main() {
     // 12. make_header produces today's ISO date.
     let header = mctx::make_header();
     assert!(header.starts_with("#mctx v1.1 | updated:"), "{header}");
+
+    // 13. JSON renderer: parseable output, one object per section, bodies intact.
+    let json = mctx::render_json(&on_disk);
+    assert!(json.starts_with("{\n  \"format\": \"mctx\""), "json header");
+    assert!(json.contains("\"sections\""), "json has sections");
+    for section in store.index() {
+        assert!(
+            json.contains(&format!("\"name\": \"{}\"", section.name)),
+            "json names section '{}'",
+            section.name
+        );
+    }
+    assert!(json.contains("\"body\": \"  \\\"devil2\\\",\\\"student/builder\\\"\""), "json body escaped");
+    assert!(json.contains("\"tier\": \"!volatile\""), "json tier");
 
     println!("index:");
     for section in store.index() {

@@ -80,6 +80,23 @@ mctx [memory.mctx]      # default: ./memory.mctx (created if missing)
 Keys: `Tab` switch panel · `a` add section · `c` checkpoint · `Enter` edit ·
 `Ctrl+S` save · `Esc` back · `q` quit (safe while unsaved).
 
+Agent / script mode (non-interactive — what an AI uses to manage its own
+memory file):
+
+```
+mctx show FILE                  raw .mctx
+mctx md FILE                    human-readable Markdown
+mctx json FILE                  AI view: structured JSON (sections/tiers/v/offsets)
+mctx list FILE                  index rows
+mctx get FILE SECTION           one section's body
+mctx set FILE SECTION TIER BODY write a section (bumps v:); BODY '-' = stdin
+mctx checkpoint FILE BODY       write the !volatile checkpoint; '-' = stdin
+mctx index FILE                 rebuild the %%INDEX after hand edits
+mctx new FILE                   create a fresh file
+```
+
+Example: `printf 'next: fix the bug\n' | mctx checkpoint memory.mctx -`
+
 Desktop notepad (human + AI views):
 
 ```

@@ -94,6 +94,12 @@ first on the next session and resume from `next:`.
 
 - **Terminal notepad** (`mctx [file.mctx]`): two-panel editor. `a` add
   section, `c` checkpoint, `Enter` edit, `Ctrl+S` save (bumps `v:`), `q` quit.
+- **CLI (agent/script mode)** — prefer these over hand-editing the file:
+  `mctx list FILE` (index rows), `mctx get FILE SECTION` (one body),
+  `mctx set FILE SECTION TIER BODY` (write, bumps `v:`, BODY `-` for stdin),
+  `mctx checkpoint FILE BODY`, `mctx md FILE` (human view), `mctx json FILE`
+  (AI structure), `mctx index FILE` (rebuild after external edits),
+  `mctx new FILE`.
 - **Desktop notepad** (`mctx-gui [file.mctx]`): two views of the same buffer —
   a **Human** tab rendering the memory as readable Markdown, and an **AI** tab
   with the raw `.mctx` source plus a structured JSON breakdown (sections,

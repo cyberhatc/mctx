@@ -329,16 +329,26 @@ pub fn parse_content(content: &str) -> Parsed {
 
     let mut bytes_seen = 0usize;
     let mut current: Option<(String, String, u32, usize, Vec<String>)> = None;
+    let mut in_index = false;
 
     for line in content.split_inclusive('\n') {
         let line_start = bytes_seen;
         bytes_seen += line.len();
         let trimmed = line.trim_end_matches(['\n', '\r']);
 
+        if trimmed.starts_with("%%END-INDEX") {
+            in_index = false;
+            continue;
+        }
+        if trimmed.starts_with("%%INDEX") {
+            in_index = true;
+            continue;
+        }
+
         if current.is_none() {
             if let Some((name, tier, version)) = parse_marker(trimmed) {
                 current = Some((name, tier, version, line_start, Vec::new()));
-            } else {
+            } else if !in_index {
                 header.push_str(trimmed);
                 header.push('\n');
             }
@@ -406,6 +416,58 @@ pub fn render_markdown(content: &str) -> String {
             }
         }
     }
+    out
+}
+
+/// Render the structured "AI view" of a `.mctx` buffer as JSON: the format,
+/// version, header, and one object per section with name, tier, version, byte
+/// offset, and body. Pure string building — no dependency on serde.
+pub fn render_json(content: &str) -> String {
+    let parsed = parse_content(content);
+    let mut out = String::from("{\n  \"format\": \"mctx\",\n  \"version\": \"1.1\",\n");
+    out.push_str(&format!("  \"updated\": {},\n", json_str(parsed.header.trim())));
+    out.push_str("  \"sections\": [");
+    for (i, section) in parsed.sections.iter().enumerate() {
+        if i > 0 {
+            out.push(',');
+        }
+        let body = parsed
+            .bodies
+            .get(i)
+            .map(|b| b.1.trim_end_matches('\n').to_string())
+            .unwrap_or_default();
+        out.push_str(&format!(
+            "\n    {{\n      \"name\": {},\n      \"tier\": {},\n      \"version\": {},\n      \"offset\": {},\n      \"body\": {}\n    }}",
+            json_str(&section.name),
+            json_str(&section.tier),
+            section.version,
+            section.offset,
+            json_str(&body),
+        ));
+    }
+    if !parsed.sections.is_empty() {
+        out.push('\n');
+    }
+    out.push_str("  ]\n}\n");
+    out
+}
+
+/// Quote a string as a JSON value (with escaping).
+fn json_str(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    out.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
     out
 }
 

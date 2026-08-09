@@ -131,29 +131,8 @@ impl MctxApp {
         }
     }
 
-    fn ai_json(&self, parsed: &mctx::Parsed) -> String {
-        let mut sections = Vec::new();
-        for (i, s) in parsed.sections.iter().enumerate() {
-            let body = parsed
-                .bodies
-                .get(i)
-                .map(|b| b.1.trim_end_matches('\n').to_string())
-                .unwrap_or_default();
-            sections.push(serde_json::json!({
-                "name": s.name,
-                "tier": s.tier,
-                "version": s.version,
-                "offset": s.offset,
-                "body": body,
-            }));
-        }
-        let doc = serde_json::json!({
-            "format": "mctx",
-            "version": "1.1",
-            "updated": parsed.header.trim(),
-            "sections": sections,
-        });
-        serde_json::to_string_pretty(&doc).unwrap_or_else(|e| e.to_string())
+    fn ai_json(&self) -> String {
+        mctx::render_json(&self.source)
     }
 
     fn top_bar(&mut self, ui: &mut egui::Ui) {
@@ -329,8 +308,7 @@ impl MctxApp {
                     });
             }
             AiPane::Json => {
-                let parsed = mctx::parse_content(&self.source);
-                let json = self.ai_json(&parsed);
+                let json = self.ai_json();
                 ui.horizontal(|ui| {
                     if ui.button("Copy JSON").clicked() {
                         ui.ctx().copy_text(json.clone());
