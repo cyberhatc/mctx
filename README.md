@@ -105,9 +105,11 @@ mctx-gui [memory.mctx]   # open a file, or use Open…/Save As…
 
 `mctx-gui` opens `.mctx` files with a **Human** tab (readable Markdown) and
 an **AI** tab (raw `.mctx` source + JSON structure). Ctrl+S saves, Ctrl+O
-opens, Ctrl+Shift+S saves as. On Debian/Ubuntu the `.deb` wires up the
-`application/x-mctx` MIME type, so double-clicking a `.mctx` file opens it in
-the app like a notepad.
+opens, Ctrl+Shift+S saves as, Ctrl+R reloads. The app watches the file on
+disk and **reloads it automatically** when something else changes it (e.g.
+the mctx CLI writing new memory while the app is open), so the view stays
+live. On Debian/Ubuntu the `.deb` wires up the `application/x-mctx` MIME
+type, so double-clicking a `.mctx` file opens it in the app like a notepad.
 
 See `man/mctx.1` and `apps/mctx-notepad/src/main.rs` for details, and
 `doc/mctx-spec.md` for the format rationale.
