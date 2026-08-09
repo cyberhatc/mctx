@@ -43,9 +43,10 @@ cat > "$STAGE/usr/share/applications/mctx.desktop" <<'EOF'
 Type=Application
 Name=mctx
 Comment=Memory Context (.mctx) notepad — human + AI views
-Exec=mctx-gui %F
+Exec=/usr/bin/mctx-gui %F
 Icon=mctx
 Terminal=false
+StartupNotify=true
 Categories=Utility;TextEditor;
 Keywords=memory;context;agent;note;
 MimeType=application/x-mctx;text/plain;
