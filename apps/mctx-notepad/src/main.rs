@@ -685,9 +685,38 @@ fn draw_prompt(f: &mut Frame, area: Rect, prompt: &Prompt) {
 
 // ---- entry point ----------------------------------------------------------------
 
+const USAGE: &str = "\
+mctx 1.1.0 — terminal notepad for .mctx memory context files
+
+USAGE:
+    mctx [FILE.mctx]
+
+If FILE does not exist it is created with a fresh header; the default is
+./memory.mctx.
+
+KEYS:
+    Tab        switch between section list and editor
+    a          add a new section (name, then tier)
+    c          open the checkpoint section (creates if missing)
+    Enter      edit selected section / newline in editor
+    Ctrl+S     save current section body (bumps its v:)
+    Esc        back to the section list
+    q          quit (ignored while unsaved); Q quits regardless
+";
+
 fn main() -> io::Result<()> {
-    let path = std::env::args()
-        .nth(1)
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--help" || a == "-h" || a == "help") {
+        print!("{USAGE}");
+        return Ok(());
+    }
+    if args.iter().any(|a| a == "--version" || a == "-V" || a == "version") {
+        println!("mctx 1.1.0");
+        return Ok(());
+    }
+
+    let path = args
+        .get(1)
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("memory.mctx"));
 

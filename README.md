@@ -44,15 +44,23 @@ rustc --edition 2021 -D warnings -O -o /tmp/mctx_test src/test_mctx.rs && /tmp/m
 
 ## Install
 
-- **Debian/Ubuntu**: `scripts/build-deb.sh` → `target/mctx_1.1.0_amd64.deb`,
-  then `sudo dpkg -i` or `sudo apt install ./mctx_1.1.0_amd64.deb`.
-- **Windows**: `cargo xwin build --release --target x86_64-pc-windows-msvc` →
-  `mctx.exe`.
+Every install path is documented below; prebuilt binaries for Linux, Windows,
+macOS and FreeBSD (plus a `.deb` and an Android APK) are attached to each
+[GitHub Release](https://github.com/cyberhatc/mctx/releases).
+
+- **One-liner (any OS)**: `curl -sSL https://raw.githubusercontent.com/cyberhatc/mctx/main/scripts/install.sh | bash`
+- **Debian / Ubuntu**: `scripts/build-deb.sh` → `target/mctx_1.1.0_amd64.deb`,
+  then `sudo apt install ./mctx_1.1.0_amd64.deb`
+  (the package uses gzip-compressed archives, so any apt/dpkg version accepts it)
+- **Homebrew (macOS/Linux)**: `brew install cyberhatc/mctx/mctx`
+- **Windows**: `mctx-windows-x86_64.exe` from the release
 - **FreeBSD**: port skeleton in `pkg/freebsd/` (`make package`, `pkg add`);
-  submit it to the ports tree for `pkg install mctx`.
-- **Release binaries**: attached to each GitHub Release via
-  `.github/workflows/release.yml` (Linux x86_64, Windows x86_64, macOS x86_64
-  & arm64, FreeBSD amd64).
+  submit it to the ports tree for `pkg install mctx`
+- **Android**: download `mctx-android.apk` from the release and side-load it,
+  or use Termux: `pkg install rust && cargo install --path apps/mctx-notepad`
+- **As an agent skill**: `bash scripts/install-skill.sh` installs
+  `skills/mctx` into `~/.config/opencode/skills/` and `~/.claude/skills/`
+  so agents know the `.mctx` read/write/checkpoint protocol globally.
 
 ## Usage
 

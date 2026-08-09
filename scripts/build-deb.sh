@@ -45,5 +45,8 @@ Description: Terminal notepad for .mctx AI agent memory files
 EOF
 
 OUT="$ROOT/target/mctx_${VERSION}_${ARCH}.deb"
-dpkg-deb --build --root-owner-group "$STAGE" "$OUT" >/dev/null
+# -Zgzip: gzip control/data archives, understood by every apt/dpkg version.
+# zstd (dpkg's newer default) makes older Ubuntu/Debian systems fail with
+# "Error: Unsupported file ..." at install time.
+dpkg-deb --build --root-owner-group -Zgzip "$STAGE" "$OUT" >/dev/null
 echo "built: $OUT"
