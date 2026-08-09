@@ -41,7 +41,7 @@ text** for you and **raw structure + JSON** for your agent.
 
 | Human tab — rendered Markdown, easy on the eyes | AI tab — raw `.mctx` source + JSON breakdown |
 |:---:|:---:|
-| ![mctx-gui human view](images/gui-human-tab.png) | ![mctx-gui AI view](images/gui-ai-tab.png) |
+| ![mctx-gui human view](images/humanunderstanding.png) | ![mctx-gui AI view](images/aiunderstanging.png) |
 
 ---
 
