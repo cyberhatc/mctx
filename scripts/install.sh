@@ -9,7 +9,7 @@
 set -euo pipefail
 
 REPO="cyberhatc/mctx"
-VER="v2.1.3"
+VER="v2.1.4"
 API="https://api.github.com/repos/${REPO}/releases/tags/${VER}"
 
 info()  { printf '\033[1;36m[mctx]\033[0m %s\n' "$*"; }
@@ -54,7 +54,7 @@ if command -v apt-get >/dev/null 2>&1 && [ -t 0 ]; then
   read -r yes
   case "$yes" in
     y|Y|yes|YES)
-      DEB="mctx_2.1.3_amd64.deb"
+      DEB="mctx_2.1.4_amd64.deb"
       DEBURL=$(curl -fsSL "$API" | sed -n "s/.*\"browser_download_url\": \"\([^\"]*$DEB[^\"]*\)\".*/\1/p" | head -1)
       if [ -n "${DEBURL:-}" ]; then
         curl -fsSL "$DEBURL" -o "/tmp/$DEB"

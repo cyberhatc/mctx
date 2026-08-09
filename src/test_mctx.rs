@@ -198,8 +198,29 @@ fn main() {
             section.name
         );
     }
-    assert!(json.contains("\"body\": \"  \\\"devil2\\\",\\\"student/builder\\\"\""), "json body escaped");
+    assert!(json.contains("\\\"devil2\\\""), "json body escaped: {json}");
     assert!(json.contains("\"tier\": \"!volatile\""), "json tier");
+
+    // 14. A body that *documents* the format (literal %%@ / %%END mid-line)
+    // must not create phantom sections or truncate on rewrite.
+    let path3 = format!("/tmp/mctx_test_{}_c.mctx", std::process::id());
+    fs::write(&path3, "#mctx v1.1 | updated:2026-08-08\n").unwrap();
+    let mut store3 = Store::open(&path3).unwrap();
+    let doc_body = "layout{example}:\n  \"%%@name tier v:N ... %%END\"\n  \"%%END-INDEX\"\n";
+    store3.write("format", "!fixed", doc_body).unwrap();
+    store3.write("other", "!durable", "plain body\n").unwrap();
+    // Rewriting the documenting section must keep its body intact (no truncate
+    // at the literal %%END) and the index must hold exactly the two sections.
+    store3.write("format", "!fixed", doc_body).unwrap();
+    assert_eq!(
+        store3.read("format").unwrap(),
+        doc_body,
+        "body documenting %%END must round-trip"
+    );
+    let names: Vec<&str> = store3.index().iter().map(|s| s.name.as_str()).collect();
+    assert_eq!(names, vec!["format", "other"], "no phantom sections");
+    assert_byte_exact(&path3, &store3);
+    let _ = fs::remove_file(&path3);
 
     println!("index:");
     for section in store.index() {

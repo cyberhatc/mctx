@@ -193,8 +193,15 @@ impl Store {
         // length + this relative offset.
         let mut sections: Vec<(String, String, u32, usize)> = Vec::new();
         let mut from = 0usize;
+        // Only a marker at the START of a line is structural — a body that
+        // merely *documents* `%%@...` mid-line must not spawn a phantom
+        // section (e.g. a section describing the format itself).
         while let Some(rel) = body[from..].find("%%@") {
             let pos = from + rel;
+            if pos != 0 && body.as_bytes().get(pos - 1).copied() != Some(b'\n') {
+                from = pos + 3;
+                continue;
+            }
             let line_end = body[pos..]
                 .find('\n')
                 .map(|i| pos + i)
@@ -241,12 +248,21 @@ fn section_block(name: &str, tier: &str, version: u32, body: &str) -> String {
     }
 }
 
-/// Index of the byte just past a section's `%%END` terminator line.
+/// Index of the byte just past a section's `%%END` terminator line. Only a
+/// `%%END` that begins a line is structural, so bodies may mention `%%END` or
+/// `%%END-INDEX` in prose without truncating the section.
 fn section_end(content: &str, from: usize) -> usize {
-    let rel = content[from..]
-        .find("%%END")
-        .unwrap_or(content.len() - from);
-    let mut end = from + rel + "%%END".len();
+    let mut search = from;
+    let mut end = content.len();
+    while let Some(rel) = content[search..].find("%%END") {
+        let pos = search + rel;
+        let at_line_start = pos == 0 || content.as_bytes().get(pos - 1).copied() == Some(b'\n');
+        if at_line_start {
+            end = pos + "%%END".len();
+            break;
+        }
+        search = pos + 5;
+    }
     for byte in content[end..].bytes() {
         if byte == b'\n' || byte == b'\r' {
             end += 1;

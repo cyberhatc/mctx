@@ -1,6 +1,6 @@
 [package]
 name = "mctx"
-version = "2.1.3"
+version = "2.1.4"
 edition = "2021"
 description = "Memory Context (.mctx) file format — token-optimized, seek-indexed AI agent memory"
 license = "MIT OR Apache-2.0"

@@ -296,7 +296,7 @@ impl MctxApp {
                 let parsed = mctx::parse_content(&self.source);
                 ui.label(
                     egui::RichText::new(format!(
-                        "mctx v2.1.3 · {} sections · {} bytes",
+                        "mctx v2.1.4 · {} sections · {} bytes",
                         parsed.sections.len(),
                         self.source.len()
                     ))

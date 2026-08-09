@@ -53,8 +53,8 @@ macOS and FreeBSD (plus a `.deb` and an Android APK) are attached to each
 [GitHub Release](https://github.com/cyberhatc/mctx/releases).
 
 - **One-liner (any OS)**: `curl -sSL https://raw.githubusercontent.com/cyberhatc/mctx/main/scripts/install.sh | bash`
-- **Debian / Ubuntu**: `scripts/build-deb.sh` → `target/mctx_2.1.3_amd64.deb`,
-  then `sudo apt install ./mctx_2.1.3_amd64.deb`
+- **Debian / Ubuntu**: `scripts/build-deb.sh` → `target/mctx_2.1.4_amd64.deb`,
+  then `sudo apt install ./mctx_2.1.4_amd64.deb`
   (the package uses gzip-compressed archives, so any apt/dpkg version accepts
   it; it installs both `mctx` and `mctx-gui` and registers `.mctx` files so
   they open in the mctx app from your file manager)

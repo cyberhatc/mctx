@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ARCH="${1:-amd64}"
 BIN="$ROOT/target/release/mctx"
 GUI="$ROOT/target/release/mctx-gui"
-VERSION="2.1.3"
+VERSION="2.1.4"
 
 if [ ! -f "$BIN" ]; then
   echo "release binary not found at $BIN — run 'cargo build --release' first" >&2
