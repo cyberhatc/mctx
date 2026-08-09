@@ -1,45 +1,5 @@
 <div align="center">
 
-```mctx
-#mctx v1.1 | updated:2026-08-09
-%%INDEX
-m:!fixed:v1:0000000151
-c:!durable:v1:0000000290
-t:!durable:v1:0000000345
-x:!volatile:v1:0000000395
-%%END-INDEX
-%%@m !fixed v:1
- _ __ ___   __ _ _ __ | |__
-| '_ ` _ \ / _` | '_ \| '_ \
-| | | | | | (_| | | | | |_) |
-|_| |_| |_|\__,_|_| |_|_.__/
-%%END
-
-%%@c !durable v:1
-  ___
- / __|
-| |
-| |__
- \___|
-%%END
-
-%%@t !durable v:1
- _
-| |_
-| __|
-| |_
- \__|
-%%END
-
-%%@x !volatile v:1
-__   __
-\ \ / /
- \ V /
-  | |
-  |_|
-%%END
-```
-
 # mctx — Memory Context
 
 ### One file. Two minds. Yours and your AI's.
