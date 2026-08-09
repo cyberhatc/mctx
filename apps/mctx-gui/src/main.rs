@@ -54,6 +54,9 @@ struct MctxApp {
     status: Option<String>,
     view: View,
     ai_pane: AiPane,
+    last_mtime: Option<std::time::SystemTime>,
+    last_len: Option<u64>,
+    disk_changed: bool,
 }
 
 impl MctxApp {
@@ -66,6 +69,9 @@ impl MctxApp {
             status: None,
             view: View::Human,
             ai_pane: AiPane::Raw,
+            last_mtime: None,
+            last_len: None,
+            disk_changed: false,
         };
         if let Some(path) = path {
             app.open(path);
@@ -77,6 +83,87 @@ impl MctxApp {
         self.source != self.saved_text
     }
 
+    /// Remember the file's current mtime + size so reload_if_changed can
+    /// detect external writes (e.g. the mctx CLI, another editor).
+    fn record_stat(&mut self) {
+        let Some(path) = &self.path else {
+            self.last_mtime = None;
+            self.last_len = None;
+            return;
+        };
+        if let Ok(meta) = std::fs::metadata(path) {
+            if let Ok(mtime) = meta.modified() {
+                self.last_mtime = Some(mtime);
+                self.last_len = Some(meta.len());
+            }
+        }
+    }
+
+    /// Poll the file on disk. If it changed since we loaded/recorded it and the
+    /// buffer has no unsaved edits, reload silently so the GUI stays in sync
+    /// with whatever an agent (or another editor) wrote. If the buffer is
+    /// dirty, keep the user's edits and flag that the disk has moved on.
+    fn reload_if_changed(&mut self) {
+        let Some(path) = self.path.clone() else {
+            return;
+        };
+        let meta = match std::fs::metadata(&path) {
+            Ok(m) => m,
+            Err(_) => {
+                self.disk_changed = true;
+                return;
+            }
+        };
+        let changed = match (self.last_mtime, meta.modified()) {
+            (Some(prev), Ok(now)) => now != prev,
+            _ => self.last_len != Some(meta.len()),
+        };
+        if !changed {
+            return;
+        }
+        self.last_len = Some(meta.len());
+        match std::fs::read_to_string(&path) {
+            Ok(text) => {
+                if self.dirty() {
+                    self.disk_changed = true;
+                    self.status = Some("file changed on disk — unsaved edits kept".to_string());
+                } else {
+                    self.source = text.clone();
+                    self.saved_text = text;
+                    self.error = None;
+                    self.disk_changed = false;
+                    self.status = Some("reloaded from disk".to_string());
+                }
+            }
+            Err(e) => {
+                self.error = Some(format!("read {}: {e}", path.display()));
+            }
+        }
+        if let Ok(m) = meta.modified() {
+            self.last_mtime = Some(m);
+        }
+    }
+
+    /// Reload from disk unconditionally, discarding any unsaved edits.
+    fn reload_from_disk(&mut self) {
+        let Some(path) = self.path.clone() else {
+            return;
+        };
+        match std::fs::read_to_string(&path) {
+            Ok(text) => {
+                self.source = text.clone();
+                self.saved_text = text;
+                self.error = None;
+                self.disk_changed = false;
+                self.status = Some("reloaded from disk".to_string());
+            }
+            Err(e) => {
+                self.error = Some(format!("read {}: {e}", path.display()));
+            }
+        }
+        self.record_stat();
+    }
+
     fn open(&mut self, path: PathBuf) {
         match std::fs::read_to_string(&path) {
             Ok(text) => {
@@ -84,7 +171,9 @@ impl MctxApp {
                 self.source = text;
                 self.saved_text = self.source.clone();
                 self.error = None;
+                self.disk_changed = false;
                 self.status = Some("opened".to_string());
+                self.record_stat();
             }
             Err(e) => {
                 self.error = Some(format!("open {}: {e}", path.display()));
@@ -123,7 +212,9 @@ impl MctxApp {
             Ok(()) => {
                 self.saved_text = self.source.clone();
                 self.error = None;
+                self.disk_changed = false;
                 self.status = Some(format!("saved {}", path.display()));
+                self.record_stat();
             }
             Err(e) => {
                 self.error = Some(format!("save {}: {e}", path.display()));
@@ -155,11 +246,17 @@ impl MctxApp {
                     self.save_as();
                 }
                 ui.separator();
+                if ui.button("Reload").clicked() {
+                    self.reload_from_disk();
+                }
                 if ui.button("New").clicked() {
                     self.source = new_document();
                     self.path = None;
                     self.saved_text = String::new();
                     self.error = None;
+                    self.disk_changed = false;
+                    self.last_mtime = None;
+                    self.last_len = None;
                 }
 
                 ui.separator();
@@ -173,6 +270,9 @@ impl MctxApp {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if self.dirty() {
                         ui.colored_label(egui::Color32::YELLOW, "● unsaved");
+                    }
+                    if self.disk_changed {
+                        ui.colored_label(egui::Color32::from_rgb(255, 160, 60), "⟳ changed on disk");
                     }
                     if let Some(path) = &self.path {
                         ui.label(
@@ -348,6 +448,14 @@ impl eframe::App for MctxApp {
         if ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::S)) {
             self.save();
         }
+        if ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::R)) {
+            self.reload_from_disk();
+        }
+
+        // Watch the file: reload when it changes on disk (e.g. the mctx CLI
+        // wrote new memory), and keep polling every 500ms.
+        self.reload_if_changed();
+        ctx.request_repaint_after(std::time::Duration::from_millis(500));
 
         self.top_bar(ui);
         self.bottom_bar(ui);
