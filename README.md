@@ -1,6 +1,6 @@
 <div align="center">
 
-# mctx — Memory Context
+# .mctx — Memory Context
 
 ### One file. Two minds. Yours and your AI's.
 
